@@ -44,49 +44,51 @@ function enqueue_styles() {
 
 
 function build_sketch($content) {
-  $dom = new DOMDocument();
-  $dom->loadHTML(mb_convert_encoding($content, 'HTML-ENTITIES', 'UTF-8'));
-  $xpath = new DOMXpath($dom);
-  $sketches = $xpath->query('//a[@class="p5-embed"]');
+  if (!empty($content)){ // fix 
+    $dom = new DOMDocument();
+    $dom->loadHTML(mb_convert_encoding($content, 'HTML-ENTITIES', 'UTF-8'));
+    $xpath = new DOMXpath($dom);
+    $sketches = $xpath->query('//a[@class="p5-embed"]');
+  
+    foreach ($sketches as $s) {
+      $name = $s->nodeValue;
+      $url = $s->getAttribute('href');
+      $s->setAttribute('class', 'p5_sketch_link');
+  
+      $code = file_get_contents($url);
+  
+      $w = $s->getAttribute('data-width');
+      $h = $s->getAttribute('data-height');
+      $nocode = $s->getAttribute('data-nocode');
+      $fontsize = $s->getAttribute('data-fontsize');
+  
+      $iframe = $dom->createElement('iframe');
+      $iframe->setAttribute('src', plugins_url('p5_iframe.html', __FILE__));
+      $iframe->setAttribute('class', 'p5_exampleFrame');
+      $iframe->setAttribute('width', $w);
+      $iframe->setAttribute('height', $h);
+      $s->parentNode->appendChild($iframe);
+  
+      $pre = $dom->createElement('pre');
+      $pre->setAttribute('class', 'language-javascript');
+      $s->parentNode->appendChild($pre);
+  
+      $editor = $dom->createElement('code', $code);
+      $editor->setAttribute('class', 'p5_editor language-javascript');
+      $pre->appendChild($editor);
 
-  foreach ($sketches as $s) {
-    $name = $s->nodeValue;
-    $url = $s->getAttribute('href');
-    $s->setAttribute('class', 'p5_sketch_link');
+      if ($nocode == 'true') {
+        $pre->setAttribute('style', 'display:none');
+      }
 
-    $code = file_get_contents($url);
-
-    $w = $s->getAttribute('data-width');
-    $h = $s->getAttribute('data-height');
-    $nocode = $s->getAttribute('data-nocode');
-    $fontsize = $s->getAttribute('data-fontsize');
-
-    $iframe = $dom->createElement('iframe');
-    $iframe->setAttribute('src', plugins_url('p5_iframe.html', __FILE__));
-    $iframe->setAttribute('class', 'p5_exampleFrame');
-    $iframe->setAttribute('width', $w);
-    $iframe->setAttribute('height', $h);
-    $s->parentNode->appendChild($iframe);
-
-    $pre = $dom->createElement('pre');
-    $pre->setAttribute('class', 'language-javascript');
-    $s->parentNode->appendChild($pre);
-
-    $editor = $dom->createElement('code', $code);
-    $editor->setAttribute('class', 'p5_editor language-javascript');
-    $pre->appendChild($editor);
-
-    if ($nocode == 'true') {
-      $pre->setAttribute('style', 'display:none');
+      if ($fontsize) {
+        $lineheight = $fontsize * 1.45;
+        $pre->setAttribute('style', 'font-size:'.$fontsize.'px !important; line-height:'.$lineheight.'px !important');
+        $editor->setAttribute('style', 'font-size:'.$fontsize.'px !important;');
+      }
     }
-
-    if ($fontsize) {
-      $lineheight = $fontsize * 1.45;
-      $pre->setAttribute('style', 'font-size:'.$fontsize.'px !important; line-height:'.$lineheight.'px !important');
-      $editor->setAttribute('style', 'font-size:'.$fontsize.'px !important;');
-    }
+    return $dom->saveHTML();
   }
-  return $dom->saveHTML();
 }
 add_filter('the_content', build_sketch);
 
